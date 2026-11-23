@@ -5,6 +5,7 @@ import { company, nav } from '../data/site';
 import { categories } from '../data/products';
 import { Button, SplitText, useReveals, Photo } from './ui';
 import { scrollToTop } from './scroll';
+import Logo from './Logo';
 
 export default function Footer() {
   const ref = useRef(null);
@@ -46,6 +47,11 @@ export default function Footer() {
       </section>
 
       <div className="footer__grid">
+        <div className="footer__brand">
+          <Link to="/" aria-label="Dapoco home" data-cursor="hover">
+            <Logo sub="Furnitures Trading · Dubai" />
+          </Link>
+        </div>
         <div>
           <h4>Studio</h4>
           <ul>

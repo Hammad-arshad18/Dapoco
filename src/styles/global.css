@@ -557,6 +557,15 @@ html.cursor-on .cursor-ring {
   text-transform: uppercase;
   color: var(--on-dark-mute);
 }
+.preloader__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.preloader__brand .logo-mark {
+  height: 1.35rem;
+  color: var(--on-dark);
+}
 .preloader__count {
   position: absolute;
   right: var(--gutter);
@@ -653,26 +662,42 @@ html.cursor-on .cursor-ring {
   backdrop-filter: none;
   color: var(--on-dark);
 }
-.wordmark {
+/* ==== LOGO ==== */
+.logo {
   display: inline-flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
   line-height: 1;
+  color: var(--ink);
 }
-.wordmark__name {
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 1.15rem;
-  letter-spacing: 0.34em;
+.logo-mark {
+  display: block;
+  height: 2.15rem;
+  width: auto;
+  flex: none;
 }
-.wordmark__sub {
-  margin-top: 0.35rem;
+.logo__type {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+.logo-name {
+  display: block;
+  height: 0.82rem;
+  width: auto;
+}
+.logo__sub {
   font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.92rem;
-  letter-spacing: 0.01em;
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   color: var(--mute);
+  white-space: nowrap;
 }
-.nav--open .wordmark__sub {
+.nav--open .logo {
+  color: var(--on-dark);
+}
+.nav--open .logo__sub {
   color: var(--on-dark-mute);
 }
 .nav__links {
@@ -1734,9 +1759,24 @@ html.cursor-on .cursor-ring {
   margin: 0 auto;
   padding: clamp(40px, 5vw, 70px) var(--gutter);
   display: grid;
-  grid-template-columns: 1fr 0.7fr 1.4fr 1fr;
+  grid-template-columns: 1.1fr 1fr 0.7fr 1.4fr 1fr;
   gap: 2.5rem;
   border-top: 1px solid var(--line-dark);
+}
+.footer__brand .logo {
+  color: var(--on-dark);
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.footer__brand .logo-mark {
+  height: 3.6rem;
+}
+.footer__brand .logo-name {
+  height: 0.95rem;
+}
+.footer__brand .logo__sub {
+  color: var(--on-dark-mute);
 }
 .footer h4 {
   margin: 0 0 1.1rem;
@@ -3127,6 +3167,9 @@ html.cursor-on .cursor-ring {
   }
   .footer__grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .footer__brand {
+    grid-column: 1 / -1;
   }
   .range__tag {
     display: none;

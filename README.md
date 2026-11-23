@@ -18,15 +18,16 @@ npm run preview    # serve the production build locally
 | UI | React 18 + React Router |
 | 3D | Three.js via @react-three/fiber + drei — one shared WebGL canvas; every 3D scene is a `<View>` |
 | Motion | GSAP + ScrollTrigger, Lenis smooth scroll (one shared render loop) |
-| 3D furniture | 20 photoreal models from Poly Haven (CC0), compressed to meshopt + WebP GLB (130–870 KB each) in `public/models/`, lit by a real studio HDRI (`public/hdri/`). Loader/normaliser: `src/three/Model.jsx`; scenes: `src/three/Scenes.jsx`, `src/three/Stage.jsx`. |
+| 3D furniture | 36 photoreal models from Poly Haven (CC0), compressed to meshopt + WebP GLB (130–870 KB each) in `public/models/`, lit by a real studio HDRI (`public/hdri/`). Loader/normaliser: `src/three/Model.jsx`; scenes: `src/three/Scenes.jsx`, `src/three/Stage.jsx`. |
 | Photography | 22 interior photos from Unsplash (free Unsplash License), optimised WebP in `public/images/` (`-sm` = 900px). Source links: `src/data/credits.js`. |
-| Design | Palette: bone `#EFEAE2`, ink `#171513`, forest `#1F2B25`, clay `#B0582F`. Type: Instrument Serif + Inter Tight. Text wordmark until the final logo arrives. |
+| Design | Palette: bone `#EFEAE2`, ink `#171513`, forest `#1F2B25`, clay `#B0582F`. Type: Instrument Serif + Inter Tight. Logo: "D + chair" monogram (`src/components/Logo.jsx`, source in `tools/brand/`). |
 
 ### Pages
-- `/` Home — photoreal lounge chair in front of giant type, statement with inline photos, stacked full-bleed collection cards, scroll-orbiting 3D showroom (sofa, armchair, ottoman, coffee table, lamp, plant), live material studio (6 leathers × 3 frame finishes), range list with cursor-follow photos, process, services accordion, sustainability, journal
+- `/` Home — photoreal lounge chair in front of giant type, statement with inline photos, stacked full-bleed collection cards, scroll-orbiting 3D showroom (sofa, armchair, ottoman, coffee table, lamp, plant), compact 3D configurator (same engine as `/studio`), range list with cursor-follow photos, process, services accordion, sustainability, journal
 - `/about` story, vision, mission, values, team, company credentials
 - `/collections` 4 luxury collections + all 10 categories (each with a 3D model) + product search across every line
 - `/collections/:slug` 10 category pages (hero 3D, highlights, full product list, Request a Quote)
+- `/studio` 3D configurator — 28 pieces, re-dye each part live, shareable URL
 - `/services`, `/journal`, `/journal/:slug`, `/contact`
 
 ### Content
@@ -56,6 +57,10 @@ configure the host to serve `index.html` for unknown paths (Netlify `_redirects`
   - a **materialise** scan line, used for piece swaps and the hero chair.
 - The URL holds the configuration (`?piece=…&f=zone:finish,…`), so a design can be shared as a link.
 - Six palettes (leather, fabric, wood, lacquer, metal, stone) with 43 finishes.
+
+## Asset pipeline
+
+Offline scripts for adding models, thumbnails and photos live in `tools/model-pipeline/` (see its README).
 
 ## Motion system
 

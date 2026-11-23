@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { useProgress } from '@react-three/drei';
 import { setReady, appState } from '../three/store';
 import { stopScroll, startScroll } from './scroll';
+import { LogoMark } from './Logo';
 
 /* ============================================================================
    Preloader — "In the workshop"
@@ -183,7 +184,7 @@ export default function Preloader() {
   return (
     <div className="preloader" ref={root} aria-live="polite" aria-label="Loading">
       <div className="preloader__meta">
-        <span>Dapoco — Furnitures Trading</span>
+        <span className="preloader__brand"><LogoMark /> Dapoco — Furnitures Trading</span>
         <span>Crafting your showroom</span>
       </div>
 

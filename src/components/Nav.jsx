@@ -5,15 +5,8 @@ import { nav, company } from '../data/site';
 import { getLenis, stopScroll, startScroll } from './scroll';
 import { Magnetic } from './ui';
 import { img } from '../data/credits';
+import Logo from './Logo';
 
-export function Wordmark() {
-  return (
-    <span className="wordmark">
-      <span className="wordmark__name">DAPOCO</span>
-      <span className="wordmark__sub">Furnitures Trading</span>
-    </span>
-  );
-}
 
 const menuImages = ['residential', 'lobby', 'lounge', 'atelier', 'suite-sculpt', 'dubai'];
 
@@ -68,7 +61,7 @@ export default function Nav() {
     <>
       <header className={`nav ${hidden && !open ? 'nav--hidden' : ''} ${scrolled ? 'nav--scrolled' : ''} ${open ? 'nav--open' : ''}`}>
         <Link to="/" className="nav__brand" aria-label="Dapoco home" data-cursor="hover">
-          <Wordmark />
+          <Logo />
         </Link>
         <nav className="nav__links" aria-label="Primary">
           {nav.slice(1).map((n) => (
