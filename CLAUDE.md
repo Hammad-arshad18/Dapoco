@@ -23,6 +23,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 | `src/three/Scenes.jsx` / `Stage.jsx` / `Model.jsx` | Hero + other scenes; `useDragRotate`, `StudioLight`, `FitCamera`; GLB loader/normaliser + `preloadModels` |
 | `src/components/Configurator.jsx` | Configurator UI. `variant="full"` (Studio page, URL sync `?piece=&f=zone:finish,…`) / `"compact"` (home) |
 | `src/components/Logo.jsx` | Brand logo as inline SVG (`Logo`, `LogoMark`, `LogoName`) |
+| `src/components/Cursor.jsx` | Brand cursor (desktop only): draughtsman's "sight" ring + dot (blend: difference), clay "View ↗" disc, forest "‹ Drag ›" disc on 3D stages. Opt in with `data-cursor="hover|view|drag"`; plain links/buttons get `hover` automatically |
 | `src/components/ui.jsx` | `useReveals` (`data-reveal` = up/fade/split/clip/img/line/stagger/scramble), `SplitText`, `Label`, `Button`, `Photo`, `Marquee` |
 | `src/components/Preloader.jsx` | SVG craftsman-planing-wood + chair-assembly loader (~1.3–2.4 s), calls `setReady()` |
 | `src/data/site.js` | Company info, nav, copy. `pieces.js` = 28 configurable pieces + 6 finish palettes; `products.js` = 10 categories; `journal.js`; `credits.js` (image helpers) |
