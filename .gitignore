@@ -47,3 +47,7 @@ tools/model-pipeline/work/
 tools/model-pipeline/out/
 tools/model-pipeline/*.jsonl
 tools/model-pipeline/*.png
+
+# Letterhead working files
+Dapoco-Letterhead.docx
+tools/brand/letterhead/build.cjs
