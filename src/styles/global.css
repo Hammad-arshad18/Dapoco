@@ -89,14 +89,14 @@ button {
   outline: 1px solid var(--clay);
   outline-offset: 4px;
 }
-html.has-cursor,
-html.has-cursor a,
-html.has-cursor button,
-html.has-cursor label {
+/* custom glass cursor on plain areas; the real hand pointer on anything clickable */
+html.has-cursor {
   cursor: none;
 }
-html.has-cursor input,
-html.has-cursor textarea {
+html.has-cursor :is(a, button, label, select, summary, [role='button'], [data-cursor='hover'], [data-cursor='view']) {
+  cursor: pointer;
+}
+html.has-cursor :is(input, textarea) {
   cursor: text;
 }
 
@@ -381,8 +381,16 @@ body::after {
 }
 
 /* ============================ CURSOR ============================ */
+/* Liquid-glass lens + draughtsman's ticks. See Cursor.jsx for how refraction works. */
+.cursor-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
 .cursor-dot,
 .cursor-ring,
+.cursor-lens,
 .cursor-disc {
   position: fixed;
   top: 0;
@@ -394,31 +402,73 @@ body::after {
 }
 html.cursor-on .cursor-dot,
 html.cursor-on .cursor-ring,
+html.cursor-on .cursor-lens,
 html.cursor-on .cursor-disc {
   opacity: 1;
 }
-/* ring + dot invert against whatever is underneath (bone, forest, photos) */
+/* ticks + dot invert against whatever is underneath (bone, forest, photos) */
 .cursor-dot,
 .cursor-ring {
   mix-blend-mode: difference;
 }
 .cursor-dot span {
   position: absolute;
-  width: 5px;
-  height: 5px;
-  margin: -2.5px 0 0 -2.5px;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
   border-radius: 50%;
   background: #fff;
   transition: transform 0.4s var(--ease);
 }
-.cursor-dot.is-hover span {
-  transform: scale(1.5);
-}
 .cursor-dot.is-view span,
 .cursor-dot.is-drag span,
-.cursor-dot.is-text span {
+.cursor-dot.is-native span {
   transform: scale(0);
 }
+
+/* glass lens */
+.cursor-lens {
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+}
+.cursor-lens span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 30%),
+    radial-gradient(circle at 72% 84%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 26%);
+  box-shadow:
+    inset 0 0 0 0.6px rgba(255, 255, 255, 0.55),
+    inset 1.2px 1.6px 1px -1px rgba(255, 255, 255, 0.9),
+    inset -1.2px -1.6px 1.5px -1px rgba(23, 21, 19, 0.3),
+    0 4px 12px -5px rgba(23, 21, 19, 0.3);
+  -webkit-backdrop-filter: blur(0.6px) saturate(1.6);
+  backdrop-filter: blur(0.6px) saturate(1.6);
+  transition: transform 0.6s var(--ease), opacity 0.35s;
+}
+html.glass-refract .cursor-lens span {
+  backdrop-filter: url(#lg-lens) saturate(1.5);
+}
+.cursor-lens.is-down span {
+  transform: scale(0.85);
+}
+.cursor-lens.is-hover span {
+  transform: scale(1.55);
+}
+.cursor-lens.is-hover.is-down span {
+  transform: scale(1.3);
+}
+.cursor-lens.is-view span,
+.cursor-lens.is-drag span,
+.cursor-lens.is-native span {
+  transform: scale(0.3);
+  opacity: 0;
+}
+
+/* ticks sit just outside the lens rim */
 .cursor-ring {
   width: 40px;
   height: 40px;
@@ -438,24 +488,25 @@ html.cursor-on .cursor-disc {
   vector-effect: non-scaling-stroke;
 }
 .cursor-ring.is-down svg {
-  transform: scale(0.78);
+  transform: scale(0.85);
 }
 .cursor-ring.is-hover svg {
-  transform: scale(1.4) rotate(45deg);
+  transform: scale(1.55) rotate(45deg);
 }
 .cursor-ring.is-hover.is-down svg {
-  transform: scale(1.15) rotate(45deg);
+  transform: scale(1.3) rotate(45deg);
 }
 .cursor-ring.is-view svg,
 .cursor-ring.is-drag svg {
   transform: scale(2.3) rotate(90deg);
   opacity: 0;
 }
-.cursor-ring.is-text svg {
+.cursor-ring.is-native svg {
   transform: scale(0.4);
   opacity: 0;
 }
-/* clay disc for "View" / "Drag" */
+
+/* tinted glass disc for "View" / "Drag" */
 .cursor-disc {
   width: 92px;
   height: 92px;
@@ -468,15 +519,29 @@ html.cursor-on .cursor-disc {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--clay);
-  color: var(--bone);
-  box-shadow: inset 0 0 0 1px rgba(239, 234, 226, 0.22), 0 12px 32px -10px rgba(23, 21, 19, 0.45);
+  color: #f7f1e8;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 45%),
+    rgba(176, 88, 47, 0.6);
+  box-shadow:
+    inset 0 0 0 0.8px rgba(255, 255, 255, 0.45),
+    inset 2px 3px 2px -2px rgba(255, 255, 255, 0.85),
+    inset -2px -3px 4px -2px rgba(23, 21, 19, 0.3),
+    inset 0 0 18px rgba(255, 255, 255, 0.12),
+    0 14px 34px -12px rgba(23, 21, 19, 0.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  backdrop-filter: blur(10px) saturate(1.6);
   transform: scale(0);
   transition: transform 0.55s var(--ease), background 0.3s;
 }
-/* forest on 3D stages — clay vanishes against leather and wood */
+html.glass-refract .cursor-disc__body {
+  backdrop-filter: url(#lg-disc) saturate(1.5);
+}
+/* forest tint on 3D stages — clay vanishes against leather and wood */
 .cursor-disc.is-drag .cursor-disc__body {
-  background: var(--forest);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 45%),
+    rgba(31, 43, 37, 0.62);
 }
 .cursor-disc.is-view .cursor-disc__body {
   transform: scale(1);
@@ -497,12 +562,13 @@ html.cursor-on .cursor-disc {
   font-size: 1.12rem;
   line-height: 1;
   letter-spacing: 0.01em;
+  text-shadow: 0 1px 6px rgba(23, 21, 19, 0.25);
 }
 .cursor-disc__arrow {
   display: none;
   font-style: normal;
   font-size: 0.95rem;
-  opacity: 0.8;
+  opacity: 0.85;
   transition: transform 0.4s var(--ease);
 }
 .cursor-disc.is-drag .cursor-disc__arrow--l,
@@ -749,20 +815,79 @@ html.cursor-on .cursor-disc {
   transition: transform 0.8s var(--ease), background 0.5s, border-color 0.5s, color 0.5s;
   border-bottom: 1px solid transparent;
 }
-.nav--scrolled {
-  background: rgba(239, 234, 226, 0.78);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  border-color: var(--line);
-}
+/* No full-width frosted bar: it would become the backdrop root and flatten the glass capsules. */
 .nav--hidden {
   transform: translateY(-100%);
 }
 .nav--open {
-  background: transparent;
-  border-color: transparent;
-  backdrop-filter: none;
   color: var(--on-dark);
+}
+
+/* ==== LIQUID GLASS ==== (refraction added by useLiquidGlass in components/glass.js) */
+.glass {
+  --glass-tint: rgba(247, 244, 239, 0.5);
+  --glass-rim: rgba(255, 255, 255, 0.7);
+  --glass-shade: rgba(23, 21, 19, 0.12);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%),
+    var(--glass-tint);
+  border: 0;
+  box-shadow:
+    inset 0 0 0 0.75px var(--glass-rim),
+    inset 0 1.5px 1px -0.5px rgba(255, 255, 255, 0.9),
+    inset 0 -1.5px 2px -1px var(--glass-shade),
+    inset 0 0 14px rgba(255, 255, 255, 0.16),
+    0 8px 26px -12px rgba(23, 21, 19, 0.3),
+    0 1px 2px rgba(23, 21, 19, 0.06);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  backdrop-filter: blur(14px) saturate(1.7);
+  transition: background 0.5s, box-shadow 0.5s, color 0.4s;
+}
+.glass--dark {
+  --glass-tint: rgba(23, 21, 19, 0.78);
+  --glass-rim: rgba(255, 255, 255, 0.22);
+  --glass-shade: rgba(0, 0, 0, 0.4);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%),
+    var(--glass-tint);
+}
+.nav--open .glass:not(.glass--dark):not(.nav__brand) {
+  --glass-tint: rgba(239, 234, 226, 0.06);
+  --glass-rim: rgba(255, 255, 255, 0.22);
+  --glass-shade: rgba(0, 0, 0, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%),
+    var(--glass-tint);
+}
+/* logo capsule: invisible at the top of the page, glass once scrolled */
+.nav__brand {
+  justify-self: start;
+  display: inline-flex;
+  padding: 0.5rem 1.15rem 0.5rem 0.85rem;
+  margin-left: -0.85rem;
+  border-radius: 999px;
+}
+.nav__brand.glass {
+  --glass-tint: rgba(247, 244, 239, 0.66);
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.nav--scrolled:not(.nav--open) .nav__brand.glass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%),
+    var(--glass-tint);
+  box-shadow:
+    inset 0 0 0 0.75px var(--glass-rim),
+    inset 0 1.5px 1px -0.5px rgba(255, 255, 255, 0.9),
+    inset 0 -1.5px 2px -1px var(--glass-shade),
+    inset 0 0 14px rgba(255, 255, 255, 0.16),
+    0 8px 26px -12px rgba(23, 21, 19, 0.3),
+    0 1px 2px rgba(23, 21, 19, 0.06);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  backdrop-filter: blur(14px) saturate(1.7);
 }
 /* ==== LOGO ==== */
 .logo {
@@ -807,10 +932,6 @@ html.cursor-on .cursor-disc {
   gap: 0.3rem;
   padding: 0.3rem;
   border-radius: 999px;
-  background: rgba(247, 244, 239, 0.6);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 .nav__link {
   position: relative;
@@ -839,6 +960,7 @@ html.cursor-on .cursor-disc {
 .nav__link.active {
   background: var(--ink);
   color: var(--bone);
+  box-shadow: inset 0 1px 0.5px rgba(255, 255, 255, 0.18), 0 2px 6px -2px rgba(23, 21, 19, 0.4);
 }
 .nav__actions {
   display: flex;
@@ -850,13 +972,11 @@ html.cursor-on .cursor-disc {
   display: inline-block;
   padding: 0.8rem 1.25rem;
   border-radius: 999px;
-  background: var(--ink);
   color: var(--bone);
   font-size: 0.84rem;
-  transition: background 0.4s;
 }
-.nav__cta:hover {
-  background: var(--clay);
+.nav__cta.glass:hover {
+  --glass-tint: rgba(176, 88, 47, 0.86);
 }
 .burger {
   display: none;
@@ -865,7 +985,6 @@ html.cursor-on .cursor-disc {
   height: 44px;
   padding: 0 1.1rem;
   border-radius: 999px;
-  border: 1px solid var(--line-2);
   font-size: 0.84rem;
 }
 .burger i {
@@ -873,9 +992,6 @@ html.cursor-on .cursor-disc {
   height: 7px;
   border-top: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
-}
-.nav--open .burger {
-  border-color: var(--line-dark);
 }
 .menu {
   position: fixed;

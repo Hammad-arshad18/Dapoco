@@ -23,7 +23,8 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 | `src/three/Scenes.jsx` / `Stage.jsx` / `Model.jsx` | Hero + other scenes; `useDragRotate`, `StudioLight`, `FitCamera`; GLB loader/normaliser + `preloadModels` |
 | `src/components/Configurator.jsx` | Configurator UI. `variant="full"` (Studio page, URL sync `?piece=&f=zone:finish,…`) / `"compact"` (home) |
 | `src/components/Logo.jsx` | Brand logo as inline SVG (`Logo`, `LogoMark`, `LogoName`) |
-| `src/components/Cursor.jsx` | Brand cursor (desktop only): draughtsman's "sight" ring + dot (blend: difference), clay "View ↗" disc, forest "‹ Drag ›" disc on 3D stages. Opt in with `data-cursor="hover|view|drag"`; plain links/buttons get `hover` automatically |
+| `src/components/Cursor.jsx` | Custom cursor (desktop only): liquid-glass lens (`backdrop-filter: url(#lg-lens)`, Chromium; frosted fallback) inside tick-mark "sight" + dot (blend: difference) on plain areas; forest glass "‹ Drag ›" disc on `data-cursor="drag"` 3D stages. **Over anything clickable (links, buttons, cards, inputs) the glass hides and the native hand pointer / caret shows — client decision, don't bring back custom hover/View states.** Don't nest the glass in a blended/opacity<1 parent |
+| `src/components/glass.js` | `useLiquidGlass(ref, opts)` — real refraction for `.glass` capsules on Chromium (SDF displacement map per element, redrawn on resize); `.glass` / `.glass--dark` CSS gives tint, rims and the frosted fallback. Used by the nav (logo capsule appears on scroll, links pill, quote button, menu button) |
 | `src/components/ui.jsx` | `useReveals` (`data-reveal` = up/fade/split/clip/img/line/stagger/scramble), `SplitText`, `Label`, `Button`, `Photo`, `Marquee` |
 | `src/components/Preloader.jsx` | SVG craftsman-planing-wood + chair-assembly loader (~1.3–2.4 s), calls `setReady()` |
 | `src/data/site.js` | Company info, nav, copy. `pieces.js` = 28 configurable pieces + 6 finish palettes; `products.js` = 10 categories; `journal.js`; `credits.js` (image helpers) |
@@ -62,6 +63,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 - **Piece swap:** the outgoing `DyePiece` must stay hidden once `cut.on` turns false (React unmounts it a frame
   later) — see `data.group.visible` in `three/Configurator.jsx`. Hero scan waits for **both** preloader-ready
   and model-loaded.
+- **Liquid glass needs a clean backdrop:** a parent with `backdrop-filter`, `filter`, `opacity<1`, `mask` or `mix-blend-mode` becomes the backdrop root and the glass stops seeing the page. That's why `.nav` has no frosted bar — don't add one back.
 - gsap absorbs CSS `transform` into its own `x/y`; don't put initial transforms in CSS for elements gsap animates.
 - Grid children holding wide content need `minmax(0,1fr)` / `min-width: 0` (caused 3000px mobile overflow).
 - Models: strip `COLOR_0` (turns dyed meshes black); zone materials are named `<name>__zN`.

@@ -6,6 +6,7 @@ import { getLenis, stopScroll, startScroll } from './scroll';
 import { Magnetic } from './ui';
 import { img } from '../data/credits';
 import Logo from './Logo';
+import { useLiquidGlass } from './glass';
 
 
 const menuImages = ['residential', 'lobby', 'lounge', 'atelier', 'suite-sculpt', 'dubai'];
@@ -16,7 +17,16 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [hoverIdx, setHoverIdx] = useState(0);
   const menu = useRef(null);
+  const brandRef = useRef(null);
+  const linksRef = useRef(null);
+  const ctaRef = useRef(null);
+  const burgerRef = useRef(null);
   const loc = useLocation();
+  // liquid glass capsules (refraction on Chromium; frosted fallback from .glass CSS elsewhere)
+  useLiquidGlass(brandRef, { enabled: scrolled && !open, bezel: 12, strength: 12, after: 'blur(8px) saturate(1.6)' });
+  useLiquidGlass(linksRef);
+  useLiquidGlass(ctaRef, { bezel: 12, strength: 14, after: 'blur(6px) saturate(1.4)' });
+  useLiquidGlass(burgerRef, { bezel: 12, strength: 14 });
 
   useEffect(() => setOpen(false), [loc.pathname]);
 
@@ -60,10 +70,10 @@ export default function Nav() {
   return (
     <>
       <header className={`nav ${hidden && !open ? 'nav--hidden' : ''} ${scrolled ? 'nav--scrolled' : ''} ${open ? 'nav--open' : ''}`}>
-        <Link to="/" className="nav__brand" aria-label="Dapoco home" data-cursor="hover">
+        <Link to="/" ref={brandRef} className="nav__brand glass" aria-label="Dapoco home" data-cursor="hover">
           <Logo />
         </Link>
-        <nav className="nav__links" aria-label="Primary">
+        <nav ref={linksRef} className="nav__links glass" aria-label="Primary">
           {nav.slice(1).map((n) => (
             <NavLink key={n.to} to={n.to} className="nav__link" data-cursor="hover">
               <span>{n.label}</span>
@@ -73,11 +83,11 @@ export default function Nav() {
         </nav>
         <div className="nav__actions">
           <Magnetic strength={0.2}>
-            <Link to="/contact?type=quote" className="nav__cta" data-cursor="hover">
+            <Link to="/contact?type=quote" ref={ctaRef} className="nav__cta glass glass--dark" data-cursor="hover">
               Request a Quote
             </Link>
           </Magnetic>
-          <button className="burger" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? 'Close menu' : 'Open menu'} data-cursor="hover">
+          <button ref={burgerRef} className="burger glass" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? 'Close menu' : 'Open menu'} data-cursor="hover">
             <span>{open ? 'Close' : 'Menu'}</span>
             <i />
           </button>
