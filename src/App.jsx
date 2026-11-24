@@ -60,6 +60,15 @@ export default function App() {
           prevent: (node) => node.tagName === 'TEXTAREA',
         });
     setLenis(lenis);
+    // While Lenis moves the page from touch input, the browser's own touch scrolling is switched off
+    // (html.touch-sync → touch-action, see global.css). Relying on preventDefault alone is not enough:
+    // whenever a touchmove slipped through, the browser scrolled/flung natively as well and the page
+    // flipped between the two positions every frame. Zoomed in → hand everything back to the browser.
+    const html = document.documentElement;
+    const vv = window.visualViewport;
+    const touchSync = () => html.classList.toggle('touch-sync', !!lenis && appState.isTouch && (vv?.scale ?? 1) <= 1.01);
+    touchSync();
+    vv?.addEventListener('resize', touchSync);
     if (lenis) {
       lenis.on('scroll', ScrollTrigger.update);
       if (!appState.ready) {
@@ -91,6 +100,8 @@ export default function App() {
     gsap.ticker.lagSmoothing(100, 33);
     return () => {
       gsap.ticker.remove(tick);
+      vv?.removeEventListener('resize', touchSync);
+      html.classList.remove('touch-sync');
       lenis?.destroy();
       setLenis(null);
     };

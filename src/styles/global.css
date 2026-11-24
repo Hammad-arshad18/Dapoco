@@ -54,6 +54,15 @@ html.lenis body {
 html.is-loading {
   overflow: hidden;
 }
+/* Phones / tablets: Lenis moves the page from touch input (syncTouch, see App.jsx), so the browser
+   must not pan or fling it as well — both at once made the page jump between two positions every
+   frame. Pinch-zoom stays; the class is removed while zoomed in so panning works there.
+   Real scrollers (menu, thumbnail rail, search results, textareas) keep their own native scrolling. */
+html.touch-sync,
+html.touch-sync body {
+  touch-action: pinch-zoom;
+  overscroll-behavior-y: none;
+}
 body {
   background: var(--bone);
   color: var(--ink);

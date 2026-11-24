@@ -7,7 +7,7 @@ export const company = {
   short: 'Dapoco',
   tagline: 'Exquisite. Timeless. Uncompromising.',
   altTagline: 'Elevating Spaces. Inspiring Living.',
-  email: 'dapocoftllc@gmail.com',
+  email: 'info@dapocollc.com',
   location: 'Dubai, UAE',
   founded: 2023,
   legalType: 'Limited Liability Company (LLC)',

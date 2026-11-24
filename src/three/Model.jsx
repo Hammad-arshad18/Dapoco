@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
-import { appState } from './store';
+import { appState, glLostBefore } from './store';
 
 /* Photoreal furniture from Poly Haven (CC0), compressed to meshopt + WebP GLB.
    Phones get the `/models/sm/` copies: same meshes, textures at 512px instead of 1024px
@@ -12,7 +12,7 @@ export const modelUrl = (id) => (appState.isTouch ? `/models/sm/${id}.glb` : `/m
    Memory management. Each texture would otherwise live in memory twice (decoded
    image in the tab + its copy on the GPU), and useGLTF caches every model it has
    ever loaded — browsing the Studio piled up hundreds of MB.
-   1. Once a texture is on the GPU its decoded ImageBitmap is closed.
+   1. On phones, once a texture is on the GPU its decoded ImageBitmap is closed.
    2. Models are reference-counted; one nobody shows for KEEP_MS is disposed (GPU
       buffers + textures) and dropped from the cache. Coming back reloads it from
       the HTTP cache, which is quick.
@@ -29,7 +29,10 @@ function freeAfterUpload(tex) {
 }
 
 function prepare(gltf) {
-  if (gltf.userData.__prepared) return;
+  // Phones only. A closed image can never be uploaded again (the upload throws, every frame), so on
+  // desktop — where memory isn't the constraint — the images are kept and the renderer can always recover.
+  // Also skipped once this tab has lost its WebGL context before: then three.js must be able to restore.
+  if (!appState.isTouch || glLostBefore() || gltf.userData.__prepared) return;
   gltf.userData.__prepared = true;
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
@@ -155,23 +158,57 @@ export const preloadModels = (ids) => ids.forEach(prefetchModel);
    shaders without blocking (KHR_parallel_shader_compile) and upload its textures
    one per frame. Otherwise all of that happens inside the frame it first appears
    in — the hitch you see when a new piece swaps in (much longer on phones).
+
+   This is only an optimisation and must NEVER be able to keep a piece hidden: it
+   always resolves, within PREP_BUDGET at most. (It used to wait on three's
+   compileAsync, which polls the driver's "program linked" flag with no time limit;
+   on machines where that flag never turns true — seen on Windows — the hero chair
+   never appeared and every piece swap hung with the old piece on screen.)
+   Whatever isn't ready when the budget runs out is simply finished on first draw.
    -------------------------------------------------------------------------- */
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
-export async function prepareOnGpu(gl, object, camera, scene) {
-  try {
-    await gl.compileAsync(object, camera, scene);
-  } catch {
-    /* falls back to compiling on first draw */
-  }
-  const textures = new Set();
-  object.traverse((o) => {
-    if (!o.isMesh) return;
-    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
-      Object.values(m).forEach((v) => v?.isTexture && textures.add(v));
-    });
+const PREP_BUDGET = 1500; // ms
+// next animation frame, or 120 ms if frames aren't being produced (background tab / window)
+const nextFrame = () =>
+  new Promise((resolve) => {
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    requestAnimationFrame(go);
+    setTimeout(go, 120);
   });
-  for (const t of textures) {
-    gl.initTexture(t); // no-op if already on the GPU
-    await nextFrame();
+
+export async function prepareOnGpu(gl, object, camera, scene, budget = PREP_BUDGET) {
+  const deadline = performance.now() + budget;
+  try {
+    if (gl.getContext().isContextLost()) return;
+    // starts compiling + linking (in the background where the browser supports it)
+    const materials = gl.compile(object, camera, scene);
+    const linking = () => {
+      for (const m of materials) {
+        const program = gl.properties.get(m).currentProgram;
+        if (program && !program.isReady()) return true;
+      }
+      return false;
+    };
+    while (linking() && performance.now() < deadline) await nextFrame();
+
+    const textures = new Set();
+    object.traverse((o) => {
+      if (!o.isMesh) return;
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+        Object.values(m).forEach((v) => v?.isTexture && textures.add(v));
+      });
+    });
+    for (const t of textures) {
+      if (performance.now() > deadline) break;
+      gl.initTexture(t); // no-op if already on the GPU
+      await nextFrame();
+    }
+  } catch (err) {
+    // show the piece anyway — the renderer does the same work when it first draws it
+    if (import.meta.env.DEV) console.warn('prepareOnGpu:', err);
   }
 }

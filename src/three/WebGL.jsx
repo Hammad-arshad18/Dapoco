@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { View, PerformanceMonitor } from '@react-three/drei';
-import { appState } from './store';
+import { appState, glLostBefore, markGlLost } from './store';
 
 function webglAvailable() {
   try {
     const c = document.createElement('canvas');
-    return !!(window.WebGL2RenderingContext && c.getContext('webgl2'));
+    const ctx = window.WebGL2RenderingContext && c.getContext('webgl2');
+    // free the probe straight away — it must not sit next to the real context
+    ctx?.getExtension('WEBGL_lose_context')?.loseContext();
+    return !!ctx;
   } catch {
     return false;
   }
@@ -39,17 +42,24 @@ export default function WebGL() {
       frameloop="never"
       shadows={false}
       dpr={dpr}
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      // powerPreference stays at the browser default on purpose. Asking for 'high-performance' makes
+      // laptops with a dedicated GPU switch graphics cards for this canvas; the switch drops the WebGL
+      // context, and on those machines the models never rendered. These scenes don't need the big GPU.
+      gl={{ antialias: true, alpha: true }}
       onCreated={(state) => {
         const { gl } = state;
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1.0;
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.setClearColor(0x000000, 0);
-        // textures release their decoded images after upload (see Model.jsx), so a restored context
-        // can't re-upload them — start fresh instead (rare: phones drop WebGL under memory pressure).
-        // If a form has text in it (e.g. a half-written message), wait for the next page change instead.
+        // The context came back after being lost. First time in this tab: start fresh (phones have
+        // released their texture images, see Model.jsx, and environment maps / static shadows are gone).
+        // If it happens again we do NOT reload — on a machine that keeps dropping the context that was
+        // an endless reload with no models; three.js restores in place instead (images are kept from
+        // then on). If a form has text in it, wait for the next page change instead of reloading now.
         gl.domElement.addEventListener('webglcontextrestored', () => {
+          if (glLostBefore()) return;
+          markGlLost();
           const typing = [...document.querySelectorAll('input, textarea')].some((f) => f.value && f.type !== 'hidden');
           if (typing) appState.needsReload = true;
           else window.location.reload();

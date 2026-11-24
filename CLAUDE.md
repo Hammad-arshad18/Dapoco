@@ -22,7 +22,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 | `src/three/dye.js` | Patches glTF materials (`onBeforeCompile`): live re-dye keeping texture detail, finish **sweep**, **scan-line** materialise/dissolve. Shared program key `dapoco-dye-1` |
 | `src/three/Configurator.jsx` | `DyePiece` (one dyeable model) + `ConfiguratorScene` (piece swap via scan, camera auto-framing, drag inertia, ScanRing) |
 | `src/three/Scenes.jsx` / `Stage.jsx` | Hero + other scenes; `useDragRotate`, `StudioLight`, `FitCamera` |
-| `src/three/Model.jsx` | `useModel(id)` — **load every GLB through it, never `useGLTF` directly**: picks `/models/sm/` (512px textures) on phones, frees decoded images after GPU upload, ref-counts models and unloads unused ones after 20 s (8 s on phones). Also `Model` (normalised clone), `prefetchModel`/`preloadModels` (HTTP-cache download only, no parse) and `prepareOnGpu` (async shader compile + one texture upload per frame before a piece is shown) |
+| `src/three/Model.jsx` | `useModel(id)` — **load every GLB through it, never `useGLTF` directly**: picks `/models/sm/` (512px textures) on phones, frees decoded images after GPU upload (phones only — a closed image can never be re-uploaded), ref-counts models and unloads unused ones after 20 s (8 s on phones). Also `Model` (normalised clone), `prefetchModel`/`preloadModels` (HTTP-cache download only, no parse) and `prepareOnGpu` (background shader compile + one texture upload per frame before a piece is shown; **always resolves, 1.5 s budget**) |
 | `src/components/Configurator.jsx` | Configurator UI. `variant="full"` (Studio page, URL sync `?piece=&f=zone:finish,…`) / `"compact"` (home) |
 | `src/components/Logo.jsx` | Brand logo as inline SVG (`Logo`, `LogoMark`, `LogoName`) |
 | `src/components/Cursor.jsx` | Custom cursor (desktop only): liquid-glass lens (`backdrop-filter: url(#lg-lens)`, Chromium; frosted fallback) inside tick-mark "sight" + dot (blend: difference) on plain areas; forest glass "‹ Drag ›" disc on `data-cursor="drag"` 3D stages. **Over anything clickable (links, buttons, cards, inputs) the glass hides and the native hand pointer / caret shows — client decision, don't bring back custom hover/View states.** Don't nest the glass in a blended/opacity<1 parent |
@@ -51,7 +51,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 
 ## Content rules (client decisions — do not revert)
 - **Do not show** the trade license number / issuing authority, any phone number, or a street address.
-  Location is always `company.location` = **"Dubai, UAE"**. Contact is email only (`dapocoftllc@gmail.com`).
+  Location is always `company.location` = **"Dubai, UAE"**. Contact is email only (`info@dapocollc.com`).
 - Contact form has no backend: `submit()` in `src/pages/Contact.jsx` builds a `mailto:`.
 - Journal article bodies are draft copy.
 
@@ -62,13 +62,14 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
   when triggers self-kill during refresh (e.g. reload while scrolled). Use `toggleActions: 'play none none none'`.
 - **Pointer capture:** `useDragRotate` calls `setPointerCapture` on the stage; it must skip buttons/links inside
   the stage or their clicks are retargeted and lost (this broke the prev/next arrows).
-- **Piece swap:** an incoming `DyePiece` (role `in`) stays hidden until `prepareOnGpu` finishes, then calls `onInfo` to start the scan — otherwise shader compile + texture upload land in the frame it appears (the swap hitch). The configurator prefetches the neighbouring pieces and any hovered thumbnail. The outgoing `DyePiece` must stay hidden once `cut.on` turns false (React unmounts it a frame
+- **Piece swap:** an incoming `DyePiece` (role `in`) stays hidden until `prepareOnGpu` finishes, then calls `onInfo` to start the scan — otherwise shader compile + texture upload land in the frame it appears (the swap hitch). `prepareOnGpu` is only an optimisation and must never be able to block: it used to await three's `compileAsync`, which polls the driver with no time limit — on Windows machines where that never completes the hero chair never appeared and every swap hung on the old piece (so colours looked dead too). Keep the budget + catch; don't reintroduce an unbounded wait. The configurator prefetches the neighbouring pieces and any hovered thumbnail. The outgoing `DyePiece` must stay hidden once `cut.on` turns false (React unmounts it a frame
   later) — see `data.group.visible` in `three/Configurator.jsx`. Hero scan waits for **both** preloader-ready
   and model-loaded.
 - **Liquid glass needs a clean backdrop:** a parent with `backdrop-filter`, `filter`, `opacity<1`, `mask` or `mix-blend-mode` becomes the backdrop root and the glass stops seeing the page. That's why `.nav` has no frosted bar — don't add one back.
 - gsap absorbs CSS `transform` into its own `x/y`; don't put initial transforms in CSS for elements gsap animates.
 - Grid children holding wide content need `minmax(0,1fr)` / `min-width: 0` (caused 3000px mobile overflow).
-- Models: strip `COLOR_0` (turns dyed meshes black); zone materials are named `<name>__zN`.
+- **WebGL context:** no `powerPreference: 'high-performance'` (it makes dual-GPU laptops switch graphics cards → context loss → models never rendered there). On `webglcontextrestored` we reload **once** per tab (`glLostBefore`/`markGlLost` in `store.js`), after that three.js restores in place and `Model.jsx` stops closing texture images — never make that reload unconditional again (reload loop).
+- Models: strip `COLOR_0` (turns dyed meshes black); zone materials are named `<name>__zN`. Zone names in `pieces.js` must match the GLB material names **exactly, including case** (`ArmChair_01.glb` holds `Armchair_01__z0`) or that zone silently never re-colours.
 - Variable name clash: `Home.jsx` imports studio pieces as `STUDIO_PIECES`.
 - Vite HMR can leave stale ScrollTrigger/Preloader errors in the console — reload before trusting them.
 
@@ -79,7 +80,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
   every frame, three passes at 1024px on the home page). Static scenes: `frames={1}` inside the models' Suspense.
 - Canvas pixel ratio is adaptive (`PerformanceMonitor` in `WebGL.jsx`; phones max 1.5).
 - Touch scrolling runs through Lenis `syncTouch` so the fixed WebGL layer moves in the same frame as the page
-  (native touch scroll made models wobble against their boxes). Nested scrollers need `data-lenis-prevent` (textareas are exempt automatically; pinch-zoom is passed back to the browser via `virtualScroll` in `App.jsx` — keep it, accessibility).
+  (native touch scroll made models wobble against their boxes). While it does, `html.touch-sync` sets `touch-action: pinch-zoom` so the browser cannot pan/fling as well — with only Lenis's `preventDefault`, a touchmove sometimes slipped through and native + Lenis scrolling fought (page flipping ±50–80px every frame on Android; measured from a client screen recording). Don't remove the class or the CSS rule; any new `overflow: auto/scroll` element needs `data-lenis-prevent`. Nested scrollers need `data-lenis-prevent` (textareas are exempt automatically; pinch-zoom is passed back to the browser via `virtualScroll` in `App.jsx` — keep it, accessibility).
 - Phones skip: photo skew (`--skew`), paper grain (`body::after`), SVG glass refraction (frosted CSS only).
 - Don't animate `filter` on large elements (use an overlay's opacity, see `.stack__dim`); don't read layout
   (`scrollWidth`, `getBoundingClientRect`) inside ticker callbacks — cache it with ResizeObserver.

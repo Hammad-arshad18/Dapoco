@@ -132,8 +132,8 @@ export const PIECES = [
     id: 'ArmChair_01', name: 'Versailles Bergère', cat: 'seating',
     blurb: 'A hand-carved bergère with a generous seat — classical proportions, tailored upholstery.',
     zones: [
-      z('upholstery', 'Upholstery', 'fabric', ['ArmChair_01__z0'], 0.3249),
-      z('frame', 'Carved frame', 'wood', ['ArmChair_01__z1'], 0.0304),
+      z('upholstery', 'Upholstery', 'fabric', ['Armchair_01__z0'], 0.3249),
+      z('frame', 'Carved frame', 'wood', ['Armchair_01__z1'], 0.0304),
     ],
   },
   {

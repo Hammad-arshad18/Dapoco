@@ -36,7 +36,7 @@ Journal article bodies are draft editorial copy — review before launch.
 
 ### Contact form
 There is no backend yet: the form opens the visitor's email app with the enquiry pre-filled
-to `dapocoftllc@gmail.com`. To receive submissions directly, replace `submit()` in
+to `info@dapocollc.com`. To receive submissions directly, replace `submit()` in
 `src/pages/Contact.jsx` with a `fetch()` to a form service (Formspree, Netlify Forms, etc.).
 
 ### Deploying

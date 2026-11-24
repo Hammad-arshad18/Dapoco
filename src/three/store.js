@@ -9,6 +9,26 @@ export const appState = {
   needsReload: false, // WebGL context came back while the visitor was typing → reload on next page change
 };
 
+/* WebGL context loss (GPU switch on dual-GPU laptops, driver reset, phone memory pressure).
+   The first time it happens we reload once for a clean start; this flag (per browser tab session)
+   stops that from ever becoming a reload loop and tells Model.jsx to keep texture images so
+   three.js can restore in place from then on. */
+const GL_LOST_KEY = 'dapoco-gl-lost';
+export function glLostBefore() {
+  try {
+    return window.sessionStorage.getItem(GL_LOST_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+export function markGlLost() {
+  try {
+    window.sessionStorage.setItem(GL_LOST_KEY, '1');
+  } catch {
+    /* storage blocked: we just can't remember it */
+  }
+}
+
 const readyListeners = new Set();
 export function setReady() {
   appState.ready = true;
