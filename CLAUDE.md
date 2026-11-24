@@ -17,10 +17,12 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 | --- | --- |
 | `src/App.jsx` | Routes, **the single render loop** (gsap.ticker → Lenis → ScrollTrigger → r3f `advance(time)`), `--skew` var, column-curtain page transition |
 | `src/three/WebGL.jsx` | One fixed full-screen transparent `<Canvas frameloop="never">` above the page; every 3D scene is a drei `<View>` tracking a DOM rect |
+| `src/three/View3D.jsx` | `View3D` (drei `<View>` + on-screen detection — **use it instead of `View`**) and `Shadow` (ContactShadows that pause off screen, 256px buffer on phones; `frames={1}` for static rooms) |
 | `src/three/store.js` | `appState` (ready, pointer, velocity, reducedMotion, isTouch) + `setReady/onReady` (fired by the preloader) |
 | `src/three/dye.js` | Patches glTF materials (`onBeforeCompile`): live re-dye keeping texture detail, finish **sweep**, **scan-line** materialise/dissolve. Shared program key `dapoco-dye-1` |
 | `src/three/Configurator.jsx` | `DyePiece` (one dyeable model) + `ConfiguratorScene` (piece swap via scan, camera auto-framing, drag inertia, ScanRing) |
-| `src/three/Scenes.jsx` / `Stage.jsx` / `Model.jsx` | Hero + other scenes; `useDragRotate`, `StudioLight`, `FitCamera`; GLB loader/normaliser + `preloadModels` |
+| `src/three/Scenes.jsx` / `Stage.jsx` | Hero + other scenes; `useDragRotate`, `StudioLight`, `FitCamera` |
+| `src/three/Model.jsx` | `useModel(id)` — **load every GLB through it, never `useGLTF` directly**: picks `/models/sm/` (512px textures) on phones, frees decoded images after GPU upload, ref-counts models and unloads unused ones after 20 s (8 s on phones). Also `Model` (normalised clone), `prefetchModel`/`preloadModels` (HTTP-cache download only, no parse) and `prepareOnGpu` (async shader compile + one texture upload per frame before a piece is shown) |
 | `src/components/Configurator.jsx` | Configurator UI. `variant="full"` (Studio page, URL sync `?piece=&f=zone:finish,…`) / `"compact"` (home) |
 | `src/components/Logo.jsx` | Brand logo as inline SVG (`Logo`, `LogoMark`, `LogoName`) |
 | `src/components/Cursor.jsx` | Custom cursor (desktop only): liquid-glass lens (`backdrop-filter: url(#lg-lens)`, Chromium; frosted fallback) inside tick-mark "sight" + dot (blend: difference) on plain areas; forest glass "‹ Drag ›" disc on `data-cursor="drag"` 3D stages. **Over anything clickable (links, buttons, cards, inputs) the glass hides and the native hand pointer / caret shows — client decision, don't bring back custom hover/View states.** Don't nest the glass in a blended/opacity<1 parent |
@@ -30,7 +32,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 | `src/data/site.js` | Company info, nav, copy. `pieces.js` = 28 configurable pieces + 6 finish palettes; `products.js` = 10 categories; `journal.js`; `credits.js` (image helpers) |
 | `src/data/zoneHex.json` | zone material name → original average colour ("Signature" swatch) |
 | `src/styles/global.css` | All styles, one file. Tokens in `:root`. Sections marked `/* ==== NAME ==== */`; responsive block near the end (breakpoints 1280/899/600) |
-| `public/models` `thumbs` `images` `hdri` | 36 GLBs (meshopt+WebP), 320px WebP thumbs, Unsplash WebP photos (`-sm` = 900px), studio HDRI |
+| `public/models` `thumbs` `images` `hdri` | 36 GLBs (meshopt+WebP; `models/sm/` = 512px-texture phone copies), 320px WebP thumbs, Unsplash WebP photos (`-sm` = 900px), studio HDRI |
 | `tools/brand/` | Logo source artwork + trace script |
 | `tools/model-pipeline/` | Offline asset scripts (download, compress, zone-split, thumbnails). See its README to add a piece |
 
@@ -60,7 +62,7 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
   when triggers self-kill during refresh (e.g. reload while scrolled). Use `toggleActions: 'play none none none'`.
 - **Pointer capture:** `useDragRotate` calls `setPointerCapture` on the stage; it must skip buttons/links inside
   the stage or their clicks are retargeted and lost (this broke the prev/next arrows).
-- **Piece swap:** the outgoing `DyePiece` must stay hidden once `cut.on` turns false (React unmounts it a frame
+- **Piece swap:** an incoming `DyePiece` (role `in`) stays hidden until `prepareOnGpu` finishes, then calls `onInfo` to start the scan — otherwise shader compile + texture upload land in the frame it appears (the swap hitch). The configurator prefetches the neighbouring pieces and any hovered thumbnail. The outgoing `DyePiece` must stay hidden once `cut.on` turns false (React unmounts it a frame
   later) — see `data.group.visible` in `three/Configurator.jsx`. Hero scan waits for **both** preloader-ready
   and model-loaded.
 - **Liquid glass needs a clean backdrop:** a parent with `backdrop-filter`, `filter`, `opacity<1`, `mask` or `mix-blend-mode` becomes the backdrop root and the glass stops seeing the page. That's why `.nav` has no frosted bar — don't add one back.
@@ -69,6 +71,22 @@ Verify UI changes in the browser at 1440×900 **and** mobile width; check for ho
 - Models: strip `COLOR_0` (turns dyed meshes black); zone materials are named `<name>__zN`.
 - Variable name clash: `Home.jsx` imports studio pieces as `STUDIO_PIECES`.
 - Vite HMR can leave stale ScrollTrigger/Preloader errors in the console — reload before trusting them.
+
+## Performance (phones especially — client asked for no lag/jitter on any device)
+- Measure in dev: `window.__r3f.gl.info` (draw calls) and per-frame ticker cost. Phone budget is tight; check
+  any new effect at mobile width.
+- Never use `ContactShadows` directly — use `Shadow` from `View3D.jsx` (off-screen shadows used to re-render
+  every frame, three passes at 1024px on the home page). Static scenes: `frames={1}` inside the models' Suspense.
+- Canvas pixel ratio is adaptive (`PerformanceMonitor` in `WebGL.jsx`; phones max 1.5).
+- Touch scrolling runs through Lenis `syncTouch` so the fixed WebGL layer moves in the same frame as the page
+  (native touch scroll made models wobble against their boxes). Nested scrollers need `data-lenis-prevent` (textareas are exempt automatically; pinch-zoom is passed back to the browser via `virtualScroll` in `App.jsx` — keep it, accessibility).
+- Phones skip: photo skew (`--skew`), paper grain (`body::after`), SVG glass refraction (frosted CSS only).
+- Don't animate `filter` on large elements (use an overlay's opacity, see `.stack__dim`); don't read layout
+  (`scrollWidth`, `getBoundingClientRect`) inside ticker callbacks — cache it with ResizeObserver.
+- Memory: textures are the bulk (a 1024px texture ≈ 5.6 MB on the GPU; all 36 models ≈ 670 MB if everything
+  were loaded). `useModel` keeps only what's shown. Every model needs a phone copy in `public/models/sm/`
+  (`tools/model-pipeline/mobile.sh <id>`) or phones get a 404.
+- `.webgl` is `100lvh` tall so the address bar sliding doesn't resize the WebGL buffer; `ScrollTrigger.config({ ignoreMobileResize: true })`.
 
 ## Assets & licensing
 3D models + HDRI: Poly Haven (CC0). Photos: Unsplash (links in `src/data/credits.js`). Keep both credited in README.

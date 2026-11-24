@@ -13,8 +13,12 @@ import { useEffect } from 'react';
  * of such parents (that's why the nav no longer has a frosted full-width bar).
  */
 
+// Phones skip refraction: an SVG displacement filter re-runs over the backdrop on every scroll frame,
+// which is too much for a phone GPU. They keep the frosted CSS glass.
 export const supportsRefraction =
-  typeof navigator !== 'undefined' && !!navigator.userAgentData?.brands?.some((b) => /Chromium/.test(b.brand));
+  typeof navigator !== 'undefined' &&
+  !!navigator.userAgentData?.brands?.some((b) => /Chromium/.test(b.brand)) &&
+  !window.matchMedia?.('(pointer: coarse)').matches;
 
 const NS = 'http://www.w3.org/2000/svg';
 let host = null;

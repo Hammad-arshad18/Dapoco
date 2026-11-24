@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
-import { View } from '@react-three/drei';
+import { View3D } from '../three/View3D';
 import { ConfiguratorScene } from '../three/Configurator';
 import { useDragRotate } from '../three/Stage';
 import { PIECES, PIECE_MAP, PALETTES, STUDIO_CATEGORIES, thumb, finishOf, defaultFinishes, specText } from '../data/pieces';
 import zoneHex from '../data/zoneHex.json';
 import { Button } from './ui';
 import { appState } from '../three/store';
+import { prefetchModel } from '../three/Model';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -135,6 +136,16 @@ export default function Configurator({ variant = 'full', initial = 'mid_century_
     window.history.replaceState(window.history.state, '', `${window.location.pathname}?piece=${piece.id}&f=${f}`);
   }, [full, piece, finishes]);
 
+  // download the neighbours in the background once the current piece has had a moment to load,
+  // so the arrows (and the ← → keys) swap without waiting on the network
+  useEffect(() => {
+    const t = setTimeout(() => {
+      prefetchModel(PIECES[(index + 1) % PIECES.length].id);
+      prefetchModel(PIECES[(index - 1 + PIECES.length) % PIECES.length].id);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [index]);
+
   // keep the active thumbnail in view
   useEffect(() => {
     const rail = railRef.current;
@@ -175,7 +186,7 @@ export default function Configurator({ variant = 'full', initial = 'mid_century_
       )}
       <div className="cfg__thumbs" ref={railRef} data-lenis-prevent>
         {list.map((p) => (
-          <button key={p.id} type="button" className={`cfg__thumb ${p.id === piece.id ? 'is-active' : ''}`} onClick={() => choose(p)} aria-pressed={p.id === piece.id} data-cursor="hover">
+          <button key={p.id} type="button" className={`cfg__thumb ${p.id === piece.id ? 'is-active' : ''}`} onClick={() => choose(p)} onPointerEnter={() => prefetchModel(p.id)} onPointerDown={() => prefetchModel(p.id)} onFocus={() => prefetchModel(p.id)} aria-pressed={p.id === piece.id} data-cursor="hover">
             <span className="cfg__thumb-n">{pad(PIECES.indexOf(p) + 1)}</span>
             <img src={thumb(p.id)} alt="" loading="lazy" decoding="async" width="160" height="160" />
             <span className="cfg__thumb-name">{p.name}</span>
@@ -193,9 +204,9 @@ export default function Configurator({ variant = 'full', initial = 'mid_century_
         <div className="cfg__ghost" aria-hidden="true">
           <RollName text={piece.name.split(' ')[0]} />
         </div>
-        <View className="cfg__view">
+        <View3D className="cfg__view">
           <ConfiguratorScene piece={piece} finishes={finishes} drag={drag} />
-        </View>
+        </View3D>
         <div className="cfg__count" aria-hidden="true">
           <span key={index} className="cfg__count-n">{pad(index + 1)}</span>
           <span>/ {PIECES.length}</span>

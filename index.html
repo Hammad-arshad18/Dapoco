@@ -12,7 +12,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" href="/models/mid_century_lounge_chair.glb" as="fetch" crossorigin />
+    <!-- hero chair: phones load the 512px-texture copy (must match modelUrl() in src/three/Model.jsx) -->
+    <link rel="preload" href="/models/mid_century_lounge_chair.glb" as="fetch" crossorigin media="(pointer: fine), (pointer: none)" />
+    <link rel="preload" href="/models/sm/mid_century_lounge_chair.glb" as="fetch" crossorigin media="(pointer: coarse)" />
     <link rel="preload" href="/hdri/studio_small_08.hdr" as="fetch" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600&family=Noto+Kufi+Arabic:wght@300;400&display=swap" rel="stylesheet" />
   </head>

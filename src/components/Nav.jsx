@@ -34,6 +34,9 @@ export default function Nav() {
     let last = 0;
     const onScroll = () => {
       const y = getLenis()?.scroll ?? window.scrollY;
+      // Lenis and the native scroll event both report each frame; the second sees no movement and would
+      // flip `hidden` off and back on (two re-renders + a restarted transition every frame)
+      if (Math.abs(y - last) < 1) return;
       setScrolled(y > 40);
       setHidden(y > last && y > 400);
       last = y;
@@ -94,7 +97,7 @@ export default function Nav() {
         </div>
       </header>
 
-      <div className="menu" ref={menu} role="dialog" aria-modal="true" aria-label="Site menu">
+      <div className="menu" ref={menu} data-lenis-prevent role="dialog" aria-modal="true" aria-label="Site menu">
         <nav className="menu__nav">
           {nav.map((n, i) => (
             <NavLink key={n.to} to={n.to} className="menu__link" onClick={() => setOpen(false)} onPointerEnter={() => setHoverIdx(i)}>

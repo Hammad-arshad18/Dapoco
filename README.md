@@ -41,8 +41,12 @@ to `dapocoftllc@gmail.com`. To receive submissions directly, replace `submit()` 
 
 ### Deploying
 `npm run build` produces a static site in `dist/`. Because it uses client-side routing,
-configure the host to serve `index.html` for unknown paths (Netlify `_redirects`:
-`/* /index.html 200`; Vercel does this automatically for Vite).
+the host must serve `index.html` for unknown paths. Both rules ship in `public/` and are copied into `dist/`:
+- Apache / LiteSpeed (Hostinger, cPanel, most shared hosting): `.htaccess` (also sets caching).
+  Upload the **contents** of `dist/` — including the hidden `.htaccess` — to the web root (`public_html`).
+- Netlify / Cloudflare Pages: `_redirects`. Vercel does this automatically for Vite.
+
+Check after deploying: open `/studio` directly and refresh — it must load, not 404.
 
 ### Credits
 - 3D models & HDRI: [Poly Haven](https://polyhaven.com) — CC0.

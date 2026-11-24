@@ -2,7 +2,7 @@ import { useEffect, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { View } from '@react-three/drei';
+import { View3D } from '../three/View3D';
 import { ProductStage, useDragRotate, SCENES } from '../three/Stage';
 import { appState } from '../three/store';
 import { img, imgSet } from '../data/credits';
@@ -209,10 +209,17 @@ export function Marquee({ items, speed = 40, className = '' }) {
     let x = 0;
     let dir = 1;
     let boost = 0;
+    // measured on resize, not per frame: reading scrollWidth right after other writes forces a layout every frame
+    let half = el.scrollWidth / 2;
+    const ro = new ResizeObserver(() => (half = el.scrollWidth / 2));
+    ro.observe(el);
+    // off-screen marquees don't need to move
+    let onScreen = true;
+    const io = new IntersectionObserver(([e]) => (onScreen = e.isIntersecting));
+    io.observe(el);
     const tick = (_, dtMs) => {
       const dt = Math.min(dtMs, 50) / 1000;
-      const half = el.scrollWidth / 2;
-      if (!half) return;
+      if (!half || !onScreen) return;
       const v = appState.velocity || 0;
       if (Math.abs(v) > 0.4) dir = v > 0 ? 1 : -1;
       boost += (Math.min(Math.abs(v) * 0.45, 9) - boost) * 0.08;
@@ -222,7 +229,11 @@ export function Marquee({ items, speed = 40, className = '' }) {
       el.style.transform = `translate3d(${x.toFixed(2)}px,0,0) skewX(${(-dir * Math.min(boost, 6) * 0.9).toFixed(2)}deg)`;
     };
     gsap.ticker.add(tick);
-    return () => gsap.ticker.remove(tick);
+    return () => {
+      gsap.ticker.remove(tick);
+      ro.disconnect();
+      io.disconnect();
+    };
   }, [speed]);
   const row = (
     <div className="marquee__row">
@@ -249,9 +260,9 @@ export function ModelView({ scene, items, className = '', interactive = true, hi
   const drag = useDragRotate(0);
   return (
     <div className={`model-view ${className}`} {...(interactive ? drag.bind : {})} data-cursor={interactive ? 'drag' : undefined}>
-      <View className="model-view__canvas">
+      <View3D className="model-view__canvas">
         <ProductStage items={items || SCENES[scene] || SCENES.lounge} drag={interactive ? drag : null} dir={dir} margin={margin} sway={sway} shadow={shadow} />
-      </View>
+      </View3D>
       {interactive && hint && (
         <span className="model-view__hint" aria-hidden="true">
           <i />

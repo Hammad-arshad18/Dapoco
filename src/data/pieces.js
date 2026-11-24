@@ -313,15 +313,10 @@ export const thumb = (id) => `/thumbs/${id}.webp`;
 
 export const finishOf = (zone, key) => PALETTES[zone.type].items.find((f) => f.key === key) || PALETTES[zone.type].items[0];
 
-/* A handsome default per piece (so the first view already looks "designed") */
-export const DEFAULTS = {
-  mid_century_lounge_chair: { upholstery: 'cognac' },
-  modern_arm_chair_01: { upholstery: 'cognac' },
-  ArmChair_01: { upholstery: 'boucle' },
-  GreenChair_01: { upholstery: 'emerald' },
-  Sofa_01: { upholstery: 'oat' },
-  GothicBed_01: { linen: 'boucle' },
-};
+/* Per-piece starting finishes. Kept empty on purpose: every piece opens in its
+   Signature (original) finish so the 3D view matches its thumbnail in the grid
+   (thumbnails are rendered from the untouched models). */
+export const DEFAULTS = {};
 
 export const defaultFinishes = (piece) => {
   const d = DEFAULTS[piece.id] || {};

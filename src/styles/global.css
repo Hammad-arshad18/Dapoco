@@ -111,11 +111,23 @@ body::after {
   mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+/* phones: a full-screen blended layer is re-composited over everything on every scroll frame — and the
+   grain is invisible at phone pixel densities anyway */
+@media (pointer: coarse) {
+  body::after {
+    display: none;
+  }
+}
 
 /* the WebGL layer floats ABOVE the page; pointer events pass through */
 .webgl {
   position: fixed !important;
   inset: 0;
+  /* largest viewport height: the canvas keeps its size when a phone's address bar slides in/out
+     (otherwise the WebGL buffer is reallocated mid-scroll) */
+  bottom: auto !important;
+  height: 100vh !important;
+  height: 100lvh !important;
   z-index: 20 !important;
   pointer-events: none !important;
 }
@@ -949,10 +961,10 @@ html.glass-refract .cursor-disc__body {
   transition: transform 0.6s var(--ease);
 }
 .nav__link span:last-child {
-  transform: translateY(100%);
+  /* transform: translateY(100%); */
 }
 .nav__link:hover span:first-child {
-  transform: translateY(-100%);
+  /* transform: translateY(-100%); */
 }
 .nav__link:hover span:last-child {
   transform: translateY(0);
@@ -1004,6 +1016,8 @@ html.glass-refract .cursor-disc__body {
   padding: calc(var(--nav-h) + 3vh) var(--gutter) 28px;
   background: var(--forest);
   color: var(--on-dark);
+  overflow-y: auto; /* short landscape phones */
+  overscroll-behavior: contain;
 }
 .menu__nav {
   display: flex;
@@ -1312,7 +1326,7 @@ html.glass-refract .cursor-disc__body {
   border-radius: var(--radius);
   overflow: hidden;
   transform-origin: 50% 0%;
-  will-change: transform, filter;
+  will-change: transform;
 }
 .stack__inner .photo {
   position: absolute;
@@ -1322,6 +1336,15 @@ html.glass-refract .cursor-disc__body {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(15, 13, 11, 0.35) 0%, rgba(15, 13, 11, 0) 30%, rgba(15, 13, 11, 0) 45%, rgba(15, 13, 11, 0.78) 100%);
+}
+.stack__dim {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  z-index: 1; /* above the text too, like the old brightness filter */
 }
 .stack__content {
   position: absolute;

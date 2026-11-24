@@ -29,5 +29,8 @@ All 3D models are Poly Haven **CC0** assets (https://polyhaven.com/models). Phot
    `node unmat.mjs in.png cut.png` (removes white matte), then `node thumb.mjs cut.png public/thumbs/<id>.webp`
    (trim + 320×320 WebP). `node sheet.mjs <dir> sheet.png` makes a contact sheet to eyeball them.
 
+6. **Phone copy**: `sh mobile.sh <id>` → `public/models/sm/<id>.glb` (textures 512px, meshopt re-applied).
+   The site loads these on touch devices, so every model needs one. `sh mobile.sh` with no id rebuilds all.
+
 ## Photos
 `node webp.mjs <dirOfJpgs> public/images` → `<key>.webp` (2000px) and `<key>-sm.webp` (900px).

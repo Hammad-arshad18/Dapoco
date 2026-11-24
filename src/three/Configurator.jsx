@@ -1,13 +1,14 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PerspectiveCamera, ContactShadows, useGLTF } from '@react-three/drei';
+import { PerspectiveCamera } from '@react-three/drei';
 import gsap from 'gsap';
-import { modelUrl } from './Model';
+import { useModel, prepareOnGpu } from './Model';
 import { StudioLight } from './Stage';
 import { makeDyeMaterial, setFinish } from './dye';
 import { PALETTES, finishOf } from '../data/pieces';
 import { appState } from './store';
+import { Shadow } from './View3D';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -16,7 +17,7 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
    scan shader. `cut` is shared with the stage to run the materialise swap.
    -------------------------------------------------------------------------- */
 export function DyePiece({ piece, finishes, cut, role = 'idle', onInfo, sweepSpeed = 1.15 }) {
-  const { scene } = useGLTF(modelUrl(piece.id));
+  const { scene } = useModel(piece.id);
   const data = useMemo(() => {
     const root = scene.clone(true);
     const zoneOf = {};
@@ -63,9 +64,33 @@ export function DyePiece({ piece, finishes, cut, role = 'idle', onInfo, sweepSpe
     first.current = false;
   }, [finishes, piece, data]);
 
+  // an incoming piece stays hidden until its shaders + textures are on the GPU (see prepareOnGpu),
+  // so the frame it first appears in is an ordinary one; only then does the scan start (onInfo)
+  const gl = useThree((s) => s.gl);
+  const camera = useThree((s) => s.camera);
+  const viewScene = useThree((s) => s.scene);
+  const ready = useRef(role !== 'in');
   useLayoutEffect(() => {
-    onInfo?.(piece.id, data);
+    if (role !== 'in') {
+      onInfo?.(piece.id, data);
+      return undefined;
+    }
+    let alive = true;
+    ready.current = false;
+    data.group.visible = false;
+    prepareOnGpu(gl, data.group, camera, viewScene).then(() => {
+      if (!alive) return;
+      ready.current = true;
+      onInfo?.(piece.id, data);
+    });
+    return () => {
+      alive = false;
+    };
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the dye materials are per-instance clones — free them with the instance (textures belong to the
+  // shared model and are released by useModel once nobody shows it)
+  useEffect(() => () => data.group.traverse((o) => o.isMesh && o.material.dispose()), [data]);
 
   useFrame((_, dt) => {
     const lo = -data.flat - 0.15;
@@ -85,7 +110,7 @@ export function DyePiece({ piece, finishes, cut, role = 'idle', onInfo, sweepSpe
     const v = cut?.current.value ?? 0;
     // once the scan has finished, the outgoing piece must stay gone — React only
     // unmounts it on the next commit, and without the cut it would flash back fully
-    data.group.visible = role !== 'out' || on === 1;
+    data.group.visible = ready.current && (role !== 'out' || on === 1);
     for (const { u } of data.mats) {
       u.uCutOn.value = on;
       u.uCut.value = v;
@@ -145,16 +170,39 @@ export function ConfiguratorScene({ piece, finishes, drag, dir = [0.42, 0.36, 1]
   const finishMap = useRef({});
   finishMap.current[piece.id] = finishes;
 
-  // piece change → mount the incoming piece hidden; the scan starts once it has loaded
+  // piece change → mount the incoming piece hidden; the scan starts once it has loaded and is on the GPU
+  const scanning = useRef(false);
   useEffect(() => {
     target.current = piece.id;
     setSlots((s) => {
-      const cur = s.find((x) => x.role !== 'out') || s[0];
+      const out = s.find((x) => x.role === 'out');
+      const inc = s.find((x) => x.role === 'in');
+      const c = cut.current;
+      // clicked again before the previous choice had even appeared: keep the piece that is still on
+      // screen and just swap what we are waiting for (or go back to it)
+      if (out && inc && !scanning.current) {
+        if (inc.piece.id === piece.id) return s;
+        if (out.piece.id === piece.id) {
+          tween.current?.kill();
+          c.on = false;
+          c.fade = 0;
+          return [{ ...out, role: 'idle' }];
+        }
+        counter.current += 1;
+        return [out, { piece, role: 'in', k: counter.current }];
+      }
+      const cur = inc || s.find((x) => x.role !== 'out') || s[0];
       if (cur.piece.id === piece.id) return s;
       tween.current?.kill();
+      scanning.current = false;
       counter.current += 1;
-      cut.current.on = true;
-      cut.current.value = -1;
+      c.on = true;
+      // the scan ring appears on the floor right away (instant feedback) and breathes until the piece is ready
+      c.value = -0.08;
+      ringR.current = info.current[cur.piece.id]?.flat || ringR.current;
+      if (!appState.reducedMotion) {
+        tween.current = gsap.fromTo(c, { fade: 0 }, { fade: 0.6, duration: 0.45, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+      }
       return [
         { ...cur, role: 'out' },
         { piece, role: 'in', k: counter.current },
@@ -177,18 +225,20 @@ export function ConfiguratorScene({ piece, finishes, drag, dir = [0.42, 0.36, 1]
         return [{ ...inc, role: 'idle' }];
       }
       const c = cut.current;
+      tween.current?.kill(); // the waiting pulse
+      scanning.current = true;
       c.value = -0.08;
-      c.fade = 0;
       tween.current = gsap
         .timeline({
           onComplete: () => {
             c.on = false;
+            scanning.current = false;
             setSlots((ss) => ss.filter((x) => x.role === 'in').map((x) => ({ ...x, role: 'idle' })));
           },
         })
         .to(c, { fade: 1, duration: 0.25, ease: 'power1.out' }, 0)
-        .to(c, { value: H, duration: 1.5, ease: 'power2.inOut' }, 0)
-        .to(c, { fade: 0, duration: 0.3, ease: 'power1.in' }, 1.25);
+        .to(c, { value: H, duration: 1.2, ease: 'power2.inOut' }, 0)
+        .to(c, { fade: 0, duration: 0.25, ease: 'power1.in' }, 0.95);
       return s;
     });
   };
@@ -250,7 +300,7 @@ export function ConfiguratorScene({ piece, finishes, drag, dir = [0.42, 0.36, 1]
         ))}
       </group>
       <ScanRing cut={cut} radius={ringR} />
-      <ContactShadows position={[0, 0.001, 0]} opacity={0.5} scale={7} blur={2.4} far={2} resolution={512} color="#2a2119" />
+      <Shadow position={[0, 0.001, 0]} opacity={0.5} scale={7} blur={2.4} far={2} resolution={512} color="#2a2119" />
     </>
   );
 }

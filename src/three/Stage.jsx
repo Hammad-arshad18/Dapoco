@@ -1,8 +1,9 @@
 import { useCallback, useRef, Suspense } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PerspectiveCamera, ContactShadows, Environment } from '@react-three/drei';
+import { PerspectiveCamera, Environment } from '@react-three/drei';
 import { Model } from './Model';
+import { Shadow } from './View3D';
 
 export const HDRI = '/hdri/studio_small_08.hdr';
 
@@ -114,7 +115,7 @@ export function ProductStage({ items, drag, dir, margin, sway = 0.35, shadow = 0
         </Suspense>
       </group>
       <FitCamera target={group} dir={dir} margin={margin} />
-      <ContactShadows position={[0, 0.001, 0]} opacity={shadow} scale={8} blur={2.6} far={2} resolution={512} color="#2a2119" />
+      <Shadow position={[0, 0.001, 0]} opacity={shadow} scale={8} blur={2.6} far={2} resolution={512} color="#2a2119" />
     </>
   );
 }

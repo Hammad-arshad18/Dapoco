@@ -1,13 +1,14 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, ContactShadows, RoundedBox } from '@react-three/drei';
+import { PerspectiveCamera, RoundedBox } from '@react-three/drei';
 import gsap from 'gsap';
 import { Model } from './Model';
 import { StudioLight } from './Stage';
 import { DyePiece } from './Configurator';
 import { PIECE_MAP } from '../data/pieces';
 import { appState, onReady } from './store';
+import { Shadow } from './View3D';
 
 const ease = (t) => 1 - Math.pow(1 - t, 3);
 const fit = (aspect, base = 1.2, k = 0.85) => (aspect < base ? Math.pow(base / aspect, k) : 1);
@@ -75,7 +76,7 @@ export function HeroScene({ progress }) {
           <DyePiece piece={PIECE_MAP.mid_century_lounge_chair} cut={cut} role="in" onInfo={onLoaded} />
         </Suspense>
       </group>
-      <ContactShadows position={[0, 0.001, 0]} opacity={0.55} scale={4} blur={2.4} far={1.6} resolution={1024} color="#3a2c20" />
+      <Shadow position={[0, 0.001, 0]} opacity={0.55} scale={4} blur={2.4} far={1.6} resolution={512} color="#3a2c20" />
     </>
   );
 }
@@ -125,8 +126,9 @@ export function ShowroomScene({ progress }) {
         <Model id="ceramic_vase_03" position={[1.3, 0.773, -0.8]} />
         <Model id="potted_plant_02" position={[-1.6, 0.012, -0.9]} />
         <Model id="modern_ceiling_lamp_01" position={[0, 1.5, 0.35]} />
+        {/* the room never moves, only the camera: render its floor shadow once (inside Suspense = after the models load) */}
+        <Shadow position={[0, 0.014, 0]} opacity={0.7} scale={8} blur={2.2} far={2.4} resolution={1024} frames={1} color="#000000" />
       </Suspense>
-      <ContactShadows position={[0, 0.014, 0]} opacity={0.7} scale={8} blur={2.2} far={2.4} resolution={1024} color="#000000" />
     </>
   );
 }

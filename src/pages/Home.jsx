@@ -1,8 +1,8 @@
 import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
-import { View } from '@react-three/drei';
 import { HeroScene, ShowroomScene } from '../three/Scenes';
+import { View3D } from '../three/View3D';
 import Configurator from '../components/Configurator';
 import { PIECES as STUDIO_PIECES } from '../data/pieces';
 import { preloadModels } from '../three/Model';
@@ -68,9 +68,9 @@ function Hero() {
             </em>
           </span>
         </h1>
-        <View className="hero__view">
+        <View3D className="hero__view">
           <HeroScene progress={progress} />
-        </View>
+        </View3D>
         <div className="hero__foot">
           <div className="hero__intro" data-intro>
             <p>Premium furniture curated for elite homes, executive offices &amp; five-star hospitality.</p>
@@ -165,12 +165,11 @@ function CollectionStack() {
       cards.forEach((card, i) => {
         const next = cards[i + 1];
         if (!next) return;
-        gsap.to(card.querySelector('.stack__inner'), {
-          scale: 0.9,
-          filter: 'brightness(0.55)',
-          ease: 'none',
-          scrollTrigger: { trigger: next, start: 'top bottom', end: 'top 15%', scrub: true },
-        });
+        const st = { trigger: next, start: 'top bottom', end: 'top 15%', scrub: true };
+        gsap.to(card.querySelector('.stack__inner'), { scale: 0.9, ease: 'none', scrollTrigger: st });
+        // darken with an overlay's opacity (GPU-composited) rather than filter: brightness(), which
+        // repaints the whole full-screen photo every frame
+        gsap.to(card.querySelector('.stack__dim'), { opacity: 0.45, ease: 'none', scrollTrigger: st });
       });
     }, ref);
     return () => ctx.revert();
@@ -189,6 +188,7 @@ function CollectionStack() {
             <div className="stack__inner">
               <Photo k={c.image} alt={c.title} reveal={false} parallax={0.08} sizes="100vw" />
               <div className="stack__shade" />
+              <div className="stack__dim" />
               <div className="stack__content">
                 <span className="stack__n">0{i + 1} / 04</span>
                 <h3 className="display display--xl">{c.title.replace(' Furniture', '')}</h3>
@@ -238,9 +238,9 @@ function Showroom() {
   return (
     <section className="showroom" ref={section}>
       <div className="showroom__sticky">
-        <View className="showroom__view">
+        <View3D className="showroom__view">
           <ShowroomScene progress={progress} />
-        </View>
+        </View3D>
         <div className="showroom__head">
           <Label n="03" className="label--light">The Showroom</Label>
           <h2 className="display display--lg" data-reveal="split">

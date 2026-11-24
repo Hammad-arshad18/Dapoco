@@ -25,6 +25,8 @@ import Studio from './pages/Studio';
 import NotFound from './pages/NotFound';
 
 gsap.registerPlugin(ScrollTrigger);
+// phones: the address bar showing/hiding resizes the viewport — don't recalculate every trigger for that (jumps)
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 const NAMES = { '': 'Home', about: 'About', collections: 'Collections', studio: 'Studio', services: 'Services', journal: 'Journal', contact: 'Contact' };
 const pageName = (path) => {
@@ -43,7 +45,20 @@ export default function App() {
   useEffect(() => {
     const lenis = appState.reducedMotion
       ? null
-      : new Lenis({ duration: 1.15, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
+      : new Lenis({
+          duration: 1.15,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true,
+          // Touch: scroll is driven from the same frame as the WebGL layer. With native touch scrolling the
+          // page moves on the compositor a frame ahead of the fixed 3D canvas, so models wobble against
+          // their boxes ("jitter"). Finger tracking stays 1:1; only the fling uses the lerp.
+          syncTouch: appState.isTouch,
+          syncTouchLerp: 0.09,
+          // leave pinch-zoom (two fingers, or panning while zoomed in) to the browser — syncTouch would block it
+          virtualScroll: ({ event }) => !(event.touches?.length > 1 || (window.visualViewport?.scale ?? 1) > 1.01),
+          // textareas scroll themselves (long contact messages)
+          prevent: (node) => node.tagName === 'TEXTAREA',
+        });
     setLenis(lenis);
     if (lenis) {
       lenis.on('scroll', ScrollTrigger.update);
@@ -54,12 +69,14 @@ export default function App() {
     }
     let skew = 0;
     const root = document.documentElement;
+    // the skew restyles every photo each frame — skip it on phones, where that budget matters most
+    const skewOn = !appState.reducedMotion && !appState.isTouch;
     const tick = (time) => {
       lenis?.raf(time * 1000);
       // scroll velocity → a gentle skew on photography (shared CSS variable)
       const v = lenis ? lenis.velocity : 0;
       appState.velocity = v;
-      const target = appState.reducedMotion ? 0 : Math.max(-3, Math.min(3, v * 0.09));
+      const target = skewOn ? Math.max(-3, Math.min(3, v * 0.09)) : 0;
       const next = skew + (target - skew) * 0.12;
       if (Math.abs(next - skew) > 0.002 || (next !== 0 && Math.abs(next) < 0.002)) {
         skew = Math.abs(next) < 0.002 ? 0 : next;
@@ -69,8 +86,9 @@ export default function App() {
       advance(time);
     };
     gsap.ticker.add(tick);
-    // cap time jumps (e.g. returning to a background tab) so 3D never lurches
-    gsap.ticker.lagSmoothing(500, 33);
+    // cap time jumps so 3D never lurches: after any frame slower than 100 ms (background tab, a heavy
+    // frame on a phone) the next step counts as one normal frame instead of a big leap
+    gsap.ticker.lagSmoothing(100, 33);
     return () => {
       gsap.ticker.remove(tick);
       lenis?.destroy();
@@ -81,6 +99,11 @@ export default function App() {
   /* ---- page transition: staggered columns + destination name ---- */
   useEffect(() => {
     if (location.pathname === shown.pathname && location.search === shown.search) return;
+    // the WebGL context was restored while a form had text in it (see WebGL.jsx) — reload now, on the new page
+    if (appState.needsReload) {
+      window.location.reload();
+      return;
+    }
     if (first.current) first.current = false;
     const el = curtain.current;
     const cols = el.querySelectorAll('.page-curtain__col');

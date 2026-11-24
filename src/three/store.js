@@ -6,6 +6,7 @@ export const appState = {
   reducedMotion:
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
   isTouch: typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches,
+  needsReload: false, // WebGL context came back while the visitor was typing → reload on next page change
 };
 
 const readyListeners = new Set();

@@ -31,7 +31,7 @@ function Search() {
         <input type="search" placeholder={`Search ${totalProducts}+ product lines — “sofa”, “banquet”, “wardrobe”…`} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search products" />
       </label>
       {q.trim().length >= 2 && (
-        <div className="search__results" role="list">
+        <div className="search__results" role="list" data-lenis-prevent>
           {results.length === 0 && <p className="search__empty">No matches — but we source to order. Ask us about it.</p>}
           {results.map((r, i) => (
             <Link key={i} to={`/collections/${r.cat.slug}`} className="search__hit" role="listitem" data-cursor="hover">
